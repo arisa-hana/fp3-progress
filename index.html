@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FP3級 学習進捗</title>
+  <style>
+    :root {
+      --c-life: #4285F4;
+      --c-insurance: #34A853;
+      --c-finance: #FF9800;
+      --c-tax: #EA4335;
+      --c-realestate: #9C27B0;
+      --c-inheritance: #00BCD4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      font-size: 14px;
+    }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 1rem;
+    }
+    .modal {
+      background: #fff; border-radius: 14px;
+      padding: 1.75rem 2rem; max-width: 500px; width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .modal h2 { font-size: 1.15rem; margin-bottom: 0.4rem; }
+    .modal-desc {
+      font-size: 0.82rem; color: #666; line-height: 1.7;
+      margin-bottom: 1.4rem;
+      background: #f8f8f8; border-radius: 8px; padding: 0.8rem 1rem;
+    }
+    .modal-desc code { background: #e8e8e8; padding: 0.1em 0.4em; border-radius: 3px; font-size: 0.9em; }
+    .form-group { margin-bottom: 0.9rem; }
+    .form-group label { display: block; font-weight: 600; font-size: 0.82rem; margin-bottom: 0.3rem; color: #444; }
+    .form-group input {
+      width: 100%; padding: 0.6rem 0.8rem;
+      border: 1.5px solid #ddd; border-radius: 7px;
+      font-size: 0.88rem; transition: border-color .2s;
+    }
+    .form-group input:focus { outline: none; border-color: #4285F4; }
+    .hint { font-size: 0.73rem; color: #999; margin-top: 0.25rem; }
+    .btn {
+      background: #4285F4; color: #fff; border: none;
+      padding: 0.65rem 1.6rem; border-radius: 7px;
+      cursor: pointer; font-size: 0.88rem; font-weight: 600;
+      transition: background .15s;
+    }
+    .btn:hover { background: #3367D6; }
+    #setup-error { color: #EA4335; font-size: 0.82rem; margin-bottom: 0.7rem; display: none; }
+
+    /* ── App ── */
+    #app { max-width: 960px; margin: 0 auto; padding: 1rem; }
+
+    /* Header */
+    header {
+      background: #fff; border-radius: 12px;
+      padding: 1.25rem 1.5rem; margin-bottom: 1rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .header-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.9rem; flex-wrap: wrap; gap: 0.5rem;
+    }
+    header h1 { font-size: 1.15rem; color: #111; }
+    .header-right { display: flex; align-items: center; gap: 0.6rem; }
+    #save-status { font-size: 0.75rem; color: #aaa; }
+    #save-status.saving { color: #FF9800; }
+    #save-status.saved  { color: #34A853; }
+    #save-status.error  { color: #EA4335; }
+    .gear-btn {
+      background: none; border: none; cursor: pointer;
+      color: #bbb; font-size: 1rem; padding: 0.2rem 0.4rem;
+      border-radius: 5px; transition: color .15s;
+    }
+    .gear-btn:hover { color: #555; }
+
+    .progress-bar-wrap {
+      height: 10px; background: #e8e8e8;
+      border-radius: 99px; overflow: hidden; margin-bottom: 0.65rem;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #34A853, #4285F4);
+      border-radius: 99px; transition: width .5s ease;
+    }
+    .stats-row {
+      display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 0.4rem;
+    }
+    .progress-text { font-size: 0.83rem; color: #666; }
+    #daily-req { font-size: 0.9rem; font-weight: 600; color: #333; }
+    #daily-req .num { color: #4285F4; font-size: 1.05rem; }
+    #daily-req.overdue .num { color: #EA4335; }
+    #daily-req.complete .num { color: #34A853; }
+
+    /* Table card */
+    .table-card {
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden;
+    }
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: #fafafa; padding: 0.65rem 0.8rem;
+      text-align: left; font-size: 0.75rem; color: #888;
+      border-bottom: 1px solid #eee; white-space: nowrap;
+    }
+    td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #f3f3f3; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr.done { background: #f0fff4; }
+    tr.done td { color: #888; }
+
+    .num-cell { font-weight: 700; color: #bbb; font-size: 0.82rem; white-space: nowrap; width: 2rem; }
+    .fieldnum-cell { font-size: 0.78rem; color: #666; white-space: nowrap; }
+    .badge {
+      display: inline-block; padding: 0.18em 0.6em;
+      border-radius: 99px; font-size: 0.7rem; font-weight: 700;
+      color: #fff; white-space: nowrap;
+    }
+    .b-ライフ     { background: var(--c-life); }
+    .b-保険       { background: var(--c-insurance); }
+    .b-金融       { background: var(--c-finance); }
+    .b-タックス   { background: var(--c-tax); }
+    .b-不動産     { background: var(--c-realestate); }
+    .b-相続       { background: var(--c-inheritance); }
+
+    .title-cell a { color: #333; text-decoration: none; font-size: 0.86rem; }
+    tr.done .title-cell a { color: #aaa; text-decoration: line-through; }
+    .title-cell a:hover { color: #4285F4; }
+
+    .check-cell { text-align: center; width: 3rem; }
+    input[type="checkbox"] { width: 17px; height: 17px; cursor: pointer; accent-color: #34A853; }
+    input[type="date"] {
+      border: 1px solid #ddd; border-radius: 5px;
+      padding: 0.28rem 0.4rem; font-size: 0.78rem; color: #555;
+      width: 128px; background: transparent;
+    }
+    input[type="date"]:disabled { opacity: 0.35; cursor: not-allowed; }
+    input[type="date"]:not(:disabled):focus { outline: none; border-color: #4285F4; }
+
+    .loading { text-align: center; padding: 3rem 1rem; color: #aaa; font-size: 0.9rem; }
+
+    @media (max-width: 580px) {
+      th, td { padding: 0.45rem 0.5rem; }
+      input[type="date"] { width: 112px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Setup Modal -->
+<div id="setup-modal" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <h2>初期設定（各端末1回のみ）</h2>
+    <div class="modal-desc">
+      進捗データをGitHubリポジトリに保存します。<br>
+      <strong>事前準備：</strong>GitHubに空のリポジトリを作成してください。<br>
+      <strong>PAT発行：</strong> GitHub → Settings → Developer settings →<br>
+      Personal access tokens → Tokens (classic) → Generate new token<br>
+      → <code>repo</code> スコープにチェックして発行
+    </div>
+    <div class="form-group">
+      <label>GitHubユーザー名</label>
+      <input id="s-user" type="text" placeholder="例: your-username" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>リポジトリ名</label>
+      <input id="s-repo" type="text" placeholder="例: fp3-progress">
+    </div>
+    <div class="form-group">
+      <label>Personal Access Token</label>
+      <input id="s-token" type="password" placeholder="ghp_xxxxxxxxxxxxxxxx">
+      <div class="hint">トークンはこの端末のブラウザにのみ保存されます</div>
+    </div>
+    <div id="setup-error"></div>
+    <button class="btn" onclick="saveSetup()">保存して開始</button>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app" style="display:none">
+  <header>
+    <div class="header-top">
+      <h1>📘 FP3級 学習進捗</h1>
+      <div class="header-right">
+        <span id="save-status"></span>
+        <button class="gear-btn" onclick="showSetup(true)" title="設定を変更">⚙️</button>
+      </div>
+    </div>
+    <div class="progress-bar-wrap">
+      <div id="progress-fill" class="progress-bar-fill" style="width:0%"></div>
+    </div>
+    <div class="stats-row">
+      <span id="progress-text" class="progress-text">0 / 41本 完了</span>
+      <span id="daily-req"></span>
+    </div>
+  </header>
+
+  <div class="table-card">
+    <div id="loading" class="loading">読み込み中…</div>
+    <div class="table-wrapper" id="table-wrapper" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>分野内No.</th>
+            <th>分野</th>
+            <th>動画タイトル</th>
+            <th>完了</th>
+            <th>完了日</th>
+          </tr>
+        </thead>
+        <tbody id="video-list"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const PLAYLIST = 'PLQQS8fV84KTMr5pQ_-bGdPIfdJzY8OV3B';
+const DEADLINE = new Date('2026-05-13T00:00:00');
+const FILE_PATH = 'progress.json';
+
+const VIDEOS = [
+  { id:  1, field:'ライフ',   fn:1, vid:'r9noktjw13w', title:'FPのNG行為とは？（ライフプランニング基礎）' },
+  { id:  2, field:'ライフ',   fn:2, vid:'w9edDkd7_4w', title:'６つの係数 東大式攻略テクニック' },
+  { id:  3, field:'ライフ',   fn:3, vid:'dV6npqUMUvY', title:'健康保険・後期高齢者医療制度' },
+  { id:  4, field:'ライフ',   fn:4, vid:'ZV1s7IkoYLk', title:'介護・労災・雇用保険 社会保険を整理' },
+  { id:  5, field:'ライフ',   fn:5, vid:'n3STyxX_Ixg', title:'公的年金のしくみ（基礎）' },
+  { id:  6, field:'ライフ',   fn:6, vid:'GeDoWR2QlAQ', title:'老後の年金 試験頻出ポイント' },
+  { id:  7, field:'ライフ',   fn:7, vid:'NdOEW20s1o8', title:'障害・死亡時にもらえる年金' },
+  { id:  8, field:'ライフ',   fn:8, vid:'dIy2HQzqYF8', title:'住宅ローン・教育資金' },
+  { id:  9, field:'保険',     fn:1, vid:'cVnQvW3B8vE', title:'保険のしくみ（基礎）' },
+  { id: 10, field:'保険',     fn:2, vid:'sSbJ2uTfobg', title:'養老保険・個人年金保険 生命保険' },
+  { id: 11, field:'保険',     fn:3, vid:'jKhCKzeE_og', title:'生命保険の税金と特約' },
+  { id: 12, field:'保険',     fn:4, vid:'X3T1N2FTIAU', title:'損害保険' },
+  { id: 13, field:'保険',     fn:5, vid:'Z7kd1etxN3w', title:'第三分野の保険' },
+  { id: 14, field:'金融',     fn:1, vid:'o2MyrHwm7nE', title:'金融の基礎' },
+  { id: 15, field:'金融',     fn:2, vid:'nRA4h8RkYNI', title:'円高・利息の計算' },
+  { id: 16, field:'金融',     fn:3, vid:'m9odIhr1HOU', title:'PER・ROE 株式投資' },
+  { id: 17, field:'金融',     fn:4, vid:'QwfcLGXz6gs', title:'債券投資 要点解説' },
+  { id: 18, field:'金融',     fn:5, vid:'4FYVdxz9Gfo', title:'債券の利回り計算（東大式）' },
+  { id: 19, field:'金融',     fn:6, vid:'WC2PtH9rFRg', title:'投資信託' },
+  { id: 20, field:'金融',     fn:7, vid:'OBCuASeEwOI', title:'ポートフォリオ・相関係数' },
+  { id: 21, field:'金融',     fn:8, vid:'ZwXEzV-cdfA', title:'資産保護のしくみ・NISA' },
+  { id: 22, field:'タックス', fn:1, vid:'jgMJ5DU73dE', title:'税金テーマ（基礎）' },
+  { id: 23, field:'タックス', fn:2, vid:'ajtLJDpqGQ4', title:'非課税所得・源泉分離課税' },
+  { id: 24, field:'タックス', fn:3, vid:'evi8BjHwzk0', title:'所得税の各種所得' },
+  { id: 25, field:'タックス', fn:4, vid:'aHGuFlNtRI4', title:'損益通算・総所得金額' },
+  { id: 26, field:'タックス', fn:5, vid:'O3TYG1aHwVk', title:'配偶者控除・扶養控除' },
+  { id: 27, field:'タックス', fn:6, vid:'flTWfLSyPZE', title:'所得控除まとめ' },
+  { id: 28, field:'タックス', fn:7, vid:'OjD_SwlS1OQ', title:'住宅ローン控除' },
+  { id: 29, field:'不動産',   fn:1, vid:'9jZxlx8Vo40', title:'不動産の登記・公示価格' },
+  { id: 30, field:'不動産',   fn:2, vid:'J01F2T_j9hM', title:'不動産取引のルール' },
+  { id: 31, field:'不動産',   fn:3, vid:'cWgsG70fBYs', title:'借地借家法' },
+  { id: 32, field:'不動産',   fn:4, vid:'1mM88FA0Vmc', title:'都市計画法' },
+  { id: 33, field:'不動産',   fn:5, vid:'wuxdsX2d6OY', title:'建築基準法・区分所有法' },
+  { id: 34, field:'不動産',   fn:6, vid:'y9JTwQM7gAg', title:'不動産の税金' },
+  { id: 35, field:'不動産',   fn:7, vid:'9y1jo3KY0iQ', title:'不動産の有効活用' },
+  { id: 36, field:'相続',     fn:1, vid:'qr1sgtBZnD8', title:'相続の基礎' },
+  { id: 37, field:'相続',     fn:2, vid:'EfuVGmQCGKY', title:'遺言と遺留分' },
+  { id: 38, field:'相続',     fn:3, vid:'2MJSqypXL-g', title:'相続税の計算' },
+  { id: 39, field:'相続',     fn:4, vid:'FgrIhx88DAg', title:'贈与のひっかけポイント' },
+  { id: 40, field:'相続',     fn:5, vid:'qkDIMqf4XD8', title:'贈与税の特例まとめ' },
+  { id: 41, field:'相続',     fn:6, vid:'JY5HFo15HR0', title:'財産の評価方法' },
+];
+
+// ── State ──
+let config = null;
+let progress = {};
+let currentSha = null;
+let saveTimer = null;
+
+// ── Helpers ──
+
+function toBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+
+function fromBase64(str) {
+  const bin = atob(str.replace(/\s/g, ''));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function initProgress() {
+  const videos = {};
+  VIDEOS.forEach(v => { videos[v.id] = { done: false, date: null }; });
+  return { videos };
+}
+
+function setStatus(text, cls) {
+  const el = document.getElementById('save-status');
+  el.textContent = text;
+  el.className = cls ? `saved-status ${cls}` : 'save-status';
+  // Re-assign id attribute after className change
+  el.id = 'save-status';
+}
+
+// ── Setup ──
+
+function showSetup(prefill) {
+  if (prefill && config) {
+    document.getElementById('s-user').value  = config.username;
+    document.getElementById('s-repo').value  = config.repo;
+    document.getElementById('s-token').value = config.token;
+  }
+  document.getElementById('setup-error').style.display = 'none';
+  document.getElementById('setup-modal').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+async function saveSetup() {
+  const username = document.getElementById('s-user').value.trim();
+  const repo     = document.getElementById('s-repo').value.trim();
+  const token    = document.getElementById('s-token').value.trim();
+  const errEl    = document.getElementById('setup-error');
+
+  if (!username || !repo || !token) {
+    errEl.textContent = 'すべての項目を入力してください';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+  config = { username, repo, token };
+  localStorage.setItem('fp3_config', JSON.stringify(config));
+
+  document.getElementById('setup-modal').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  await loadProgress();
+}
+
+// ── GitHub API ──
+
+function apiUrl() {
+  return `https://api.github.com/repos/${config.username}/${config.repo}/contents/${FILE_PATH}`;
+}
+
+function apiHeaders() {
+  return {
+    'Authorization': `Bearer ${config.token}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json'
+  };
+}
+
+async function loadProgress() {
+  setStatus('読み込み中…', '');
+  try {
+    const res = await fetch(apiUrl(), { headers: apiHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      currentSha = data.sha;
+      progress = JSON.parse(fromBase64(data.content));
+      // Fill any missing video entries (forward-compat)
+      VIDEOS.forEach(v => {
+        if (!progress.videos[v.id]) progress.videos[v.id] = { done: false, date: null };
+      });
+    } else if (res.status === 404) {
+      progress = initProgress();
+      await pushToGitHub();
+    } else if (res.status === 401 || res.status === 403) {
+      setStatus('認証エラー', 'error');
+      setTimeout(() => showSetup(true), 1500);
+      return;
+    } else {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    setStatus('', '');
+  } catch (e) {
+    setStatus('ネットワークエラー（ローカル保存）', 'error');
+    const local = localStorage.getItem('fp3_local');
+    progress = local ? JSON.parse(local) : initProgress();
+  }
+  renderTable();
+  updateStats();
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('table-wrapper').style.display = 'block';
+}
+
+async function pushToGitHub() {
+  const content = toBase64(JSON.stringify(progress, null, 2));
+  const body = { message: '進捗を更新', content };
+  if (currentSha) body.sha = currentSha;
+
+  const res = await fetch(apiUrl(), {
+    method: 'PUT',
+    headers: apiHeaders(),
+    body: JSON.stringify(body)
+  });
+
+  if (res.ok) {
+    const data = await res.json();
+    currentSha = data.content.sha;
+    return true;
+  }
+  if (res.status === 409) {
+    // Conflict: refresh SHA and retry once
+    const getRes = await fetch(apiUrl(), { headers: apiHeaders() });
+    if (getRes.ok) {
+      const getData = await getRes.json();
+      currentSha = getData.sha;
+      // Merge: remote wins for any key not in our current change
+      const remote = JSON.parse(fromBase64(getData.content));
+      // Keep our version (last write wins for simplicity)
+      return pushToGitHub();
+    }
+  }
+  return false;
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  setStatus('保存中…', 'saving');
+  saveTimer = setTimeout(async () => {
+    localStorage.setItem('fp3_local', JSON.stringify(progress));
+    if (config) {
+      const ok = await pushToGitHub();
+      setStatus(ok ? '保存済み ✓' : '保存エラー', ok ? 'saved' : 'error');
+      if (ok) setTimeout(() => setStatus('', ''), 2500);
+    }
+  }, 600);
+}
+
+// ── Render ──
+
+function renderTable() {
+  const tbody = document.getElementById('video-list');
+  tbody.innerHTML = '';
+  VIDEOS.forEach(v => {
+    const s = progress.videos?.[v.id] || { done: false, date: null };
+    const url = `https://www.youtube.com/watch?v=${v.vid}&list=${PLAYLIST}&index=${v.id}`;
+    const tr = document.createElement('tr');
+    if (s.done) tr.classList.add('done');
+    tr.id = `row-${v.id}`;
+    tr.innerHTML =
+      `<td class="num-cell">${v.id}</td>` +
+      `<td class="fieldnum-cell">${v.field}-${v.fn}</td>` +
+      `<td><span class="badge b-${v.field}">${v.field}</span></td>` +
+      `<td class="title-cell"><a href="${url}" target="_blank" rel="noopener">${v.title}</a></td>` +
+      `<td class="check-cell"><input type="checkbox" ${s.done ? 'checked' : ''} onchange="onCheck(${v.id},this)"></td>` +
+      `<td><input type="date" value="${s.date||''}" ${!s.done?'disabled':''} onchange="onDateChange(${v.id},this)"></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function onCheck(id, el) {
+  if (!progress.videos[id]) progress.videos[id] = { done: false, date: null };
+  const s = progress.videos[id];
+  s.done = el.checked;
+  if (el.checked && !s.date) s.date = todayStr();
+  else if (!el.checked) s.date = null;
+
+  const tr = document.getElementById(`row-${id}`);
+  tr.classList.toggle('done', el.checked);
+  const dateInput = tr.querySelector('input[type="date"]');
+  dateInput.value = s.date || '';
+  dateInput.disabled = !el.checked;
+
+  updateStats();
+  scheduleSave();
+}
+
+function onDateChange(id, el) {
+  if (!progress.videos[id]) progress.videos[id] = { done: true, date: null };
+  progress.videos[id].date = el.value || null;
+  scheduleSave();
+}
+
+function updateStats() {
+  const done = VIDEOS.filter(v => progress.videos?.[v.id]?.done).length;
+  const remaining = VIDEOS.length - done;
+  const pct = Math.round(done / VIDEOS.length * 100);
+
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${done} / ${VIDEOS.length}本 完了（${pct}%）`;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dl = new Date(DEADLINE); dl.setHours(0,0,0,0);
+  const remainDays = Math.floor((dl - today) / 86400000) + 1;
+
+  const el = document.getElementById('daily-req');
+  el.className = '';
+  if (remaining === 0) {
+    el.className = 'complete';
+    el.innerHTML = '<span class="num">🎉</span> 全動画 完了！';
+  } else if (remainDays <= 0) {
+    el.className = 'overdue';
+    el.innerHTML = `残り <span class="num">${remaining}本</span>・期限を過ぎています`;
+  } else {
+    const perDay = (Math.ceil(remaining / remainDays * 10) / 10).toFixed(1);
+    el.innerHTML = `1日あたり <span class="num">${perDay}本</span> 必要（残り${remainDays}日・${remaining}本）`;
+  }
+}
+
+// ── Init ──
+
+(function init() {
+  const saved = localStorage.getItem('fp3_config');
+  if (saved) {
+    config = JSON.parse(saved);
+    document.getElementById('setup-modal').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadProgress();
+  } else {
+    showSetup(false);
+  }
+})();
+</script>
+</body>
+</html>
